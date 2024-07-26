@@ -5,8 +5,14 @@ public class AdvancedPickingOptimizer__2 {
     private static final List<UnitOfMeasure> unitOfMeasurement = Arrays.asList(UnitOfMeasure.CS, UnitOfMeasure.PK, UnitOfMeasure.EA);
 
     public static void main(String[] args) {
-        printCase(Arrays.asList(1, 3, 10, 11, 23, 50, 100000), Database.getItems("local"));
         System.out.println("***************************************************************************");
+        //printCase(Arrays.asList(1, 3, 10, 11, 23, 50,100,100000),new ArrayList<>(Database.getItems("planning_1")));
+        System.out.println("***************************************************************************");
+        //printCase(Arrays.asList(1, 3, 10, 11, 23, 50,100,100000), Database.getItems("planning_2"));
+        System.out.println("***************************************************************************");
+        printCase(Arrays.asList(1, 3, 10, 11, 23, 50), Database.getItems("local"));
+        System.out.println("***************************************************************************");
+        //printCase(Arrays.asList(1, 3, 10, 11, 23, 50,100000),Database.getItems("dev"));
     }
 
     public static void printCase(List<Integer> orderList, List<Item> itemList) {
@@ -33,84 +39,103 @@ public class AdvancedPickingOptimizer__2 {
     }
 
     public static PickingResult optimizePicking(int orderQuantity, List<Item> items) {
-        Map<UnitOfMeasure, Integer> result = new HashMap<>(Map.of(UnitOfMeasure.CS, 0, UnitOfMeasure.PK, 0, UnitOfMeasure.EA, 0));
+        Map<UnitOfMeasure, Integer> resultForPrint = new HashMap<>(Map.of(UnitOfMeasure.CS, 0, UnitOfMeasure.PK, 0, UnitOfMeasure.EA, 0));
         Map<String, List<Item>> pickedItems = new HashMap<>();
-        int remainingStockQuantity = orderQuantity;
+        int orderEaQuantity = orderQuantity;
 
         for (UnitOfMeasure uom : unitOfMeasurement) {
             List<Item> filteredItems = items.stream()
                     .filter(item -> item.unitOfMeasurement.equals(uom))
-                    .sorted(Comparator.comparingInt(item -> -item.unitOfMeasurementValue))
+                    .sorted(Comparator.comparingInt(item -> -item.usableStockEaQuantity))
                     .toList();
 
             for (Item item : filteredItems) {
-                if (remainingStockQuantity == 0) break;
-                int processedUomStockQuantity = Math.min(remainingStockQuantity / item.unitOfMeasurementValue, item.usableStockEaQuantity);
-                result.put(uom, result.get(uom) + processedUomStockQuantity);
-                remainingStockQuantity -= processedUomStockQuantity * item.unitOfMeasurementValue;
-                item.usableStockEaQuantity -= processedUomStockQuantity;
+                if (orderEaQuantity <= 0) break;
+                int simulatedOrderUomQuantity = Math.min(orderEaQuantity / item.unitOfMeasurementValue, item.usableStockUomQuantity);
+                resultForPrint.put(uom, resultForPrint.get(uom) + simulatedOrderUomQuantity);
+                orderEaQuantity -= simulatedOrderUomQuantity * item.unitOfMeasurementValue;
 
-                if (processedUomStockQuantity > 0) {
-                    List<Item> itemsByUom = pickedItems.computeIfAbsent(uom.name(), k -> new ArrayList<>());
-                    Optional<Item> existingItem = itemsByUom.stream()
+
+                item.usableStockUomQuantity -= simulatedOrderUomQuantity;
+                item.usableStockEaQuantity = item.usableStockUomQuantity * item.unitOfMeasurementValue;
+                item.pickedStockUomQuantity += simulatedOrderUomQuantity;
+                item.pickedStockEaQuantity = item.pickedStockUomQuantity * item.unitOfMeasurementValue;
+
+                if (simulatedOrderUomQuantity > 0) {
+                    pickedItems.computeIfAbsent(uom.name(), k -> new ArrayList<>())
+                            .stream()
                             .filter(pickedItem -> pickedItem.stockId == item.stockId)
-                            .findFirst();
-
-                    if (existingItem.isPresent()) {
-                        existingItem.get().usableStockEaQuantity += processedUomStockQuantity;
-                    } else {
-                        Item newItem = new Item(item.itemId, item.stockId, processedUomStockQuantity, item.unitOfMeasurement.name(), item.unitOfMeasurementValue);
-                        itemsByUom.add(newItem);
-                    }
+                            .findFirst()
+                            .ifPresentOrElse(
+                                    pickedItem -> {
+                                        pickedItem.usableStockUomQuantity -= simulatedOrderUomQuantity;
+                                        pickedItem.usableStockEaQuantity = pickedItem.usableStockUomQuantity * pickedItem.unitOfMeasurementValue;
+                                        pickedItem.pickedStockUomQuantity += simulatedOrderUomQuantity;
+                                        pickedItem.pickedStockEaQuantity = pickedItem.pickedStockUomQuantity * pickedItem.unitOfMeasurementValue;
+                                    },
+                                    () -> {
+                                        pickedItems.get(uom.name()).add(item);
+                                    }
+                            );
                 }
             }
         }
 
-        if (remainingStockQuantity > 0) {
+        if (orderEaQuantity > 0) {
             List<UnitOfMeasure> unitOfMeasurementReverse = new ArrayList<>(unitOfMeasurement);
             Collections.reverse(unitOfMeasurementReverse);
             for (UnitOfMeasure uom : unitOfMeasurementReverse) {
                 List<Item> filteredItems = items.stream()
                         .filter(item -> item.unitOfMeasurement.equals(uom))
-                        .sorted(Comparator.comparingInt(item -> -item.unitOfMeasurementValue))
+                        .sorted(Comparator.comparingInt(item -> -item.usableStockEaQuantity))
                         .toList();
 
                 for (Item item : filteredItems) {
-                    if (remainingStockQuantity == 0) break;
-                    if (item.usableStockEaQuantity > 0) {
-                        result.put(uom, result.get(uom) + 1);
-                        remainingStockQuantity = item.unitOfMeasurementValue - remainingStockQuantity;
+                    if (orderEaQuantity <= 0) break;
+                    if (item.usableStockUomQuantity > 0) {
+                        resultForPrint.put(uom, resultForPrint.get(uom) + 1);
+                        orderEaQuantity = item.unitOfMeasurementValue - orderEaQuantity;
 
-                        System.out.printf("재적재 재고 UOM/수량:: [uom: %s] [remainingStockQuantity(EA): %d]%n", uom, remainingStockQuantity);
+                        item.usableStockUomQuantity -= 1;
+                        item.usableStockEaQuantity = item.usableStockUomQuantity * item.unitOfMeasurementValue;
+                        item.pickedStockUomQuantity += 1;
+                        item.pickedStockEaQuantity = item.pickedStockUomQuantity * item.unitOfMeasurementValue;
+                        item.remainStockEaQuantity = orderEaQuantity;
 
-                        List<Item> itemsByUom = pickedItems.computeIfAbsent(uom.name(), k -> new ArrayList<>());
-                        Optional<Item> existingItem = itemsByUom.stream()
+                        System.out.printf("재적재 재고 UOM/수량:: [uom: %s] [orderEaQuantity(EA): %d]%n", uom, orderEaQuantity);
+
+                        pickedItems.computeIfAbsent(uom.name(), k -> new ArrayList<>())
+                                .stream()
                                 .filter(pickedItem -> pickedItem.stockId == item.stockId)
-                                .findFirst();
-
-                        if (existingItem.isPresent()) {
-                            existingItem.get().usableStockEaQuantity += 1;
-                        } else {
-                            Item newItem = new Item(item.itemId, item.stockId, 1, item.unitOfMeasurement.name(), item.unitOfMeasurementValue);
-                            itemsByUom.add(newItem);
-                        }
-                        return new PickingResult(result, pickedItems);
+                                .findFirst()
+                                .ifPresentOrElse(
+                                        pickedItem -> {
+                                            pickedItem.usableStockUomQuantity -= 1;
+                                            pickedItem.usableStockEaQuantity = pickedItem.usableStockUomQuantity * pickedItem.unitOfMeasurementValue;
+                                            pickedItem.pickedStockUomQuantity += 1;
+                                            pickedItem.pickedStockEaQuantity = pickedItem.pickedStockUomQuantity * pickedItem.unitOfMeasurementValue;
+                                        },
+                                        () -> {
+                                            pickedItems.get(uom.name()).add(item);
+                                        }
+                                );
+                        return new PickingResult(resultForPrint, pickedItems);
                     }
                 }
             }
             System.out.println("주문 수량을 충족시킬 수 없습니다.");
             return new PickingResult(new HashMap<>(), new HashMap<>());
         } else {
-            return new PickingResult(result, pickedItems);
+            return new PickingResult(resultForPrint, pickedItems);
         }
     }
 }
 
-class PickingResult__2 {
+class PickingResult {
     private final Map<UnitOfMeasure, Integer> result;
     private final Map<String, List<Item>> pickedItems;
 
-    public PickingResult__2(Map<UnitOfMeasure, Integer> result, Map<String, List<Item>> pickedItems) {
+    public PickingResult(Map<UnitOfMeasure, Integer> result, Map<String, List<Item>> pickedItems) {
         this.result = result;
         this.pickedItems = pickedItems;
     }
@@ -120,7 +145,7 @@ class PickingResult__2 {
     }
 
     public List<Item> getItemsByUom(String uom) {
-        return pickedItems.getOrDefault(UnitOfMeasure.valueOf(uom), Collections.emptyList());
+        return pickedItems.getOrDefault(uom, Collections.emptyList());
     }
 
     public boolean isEmpty() {

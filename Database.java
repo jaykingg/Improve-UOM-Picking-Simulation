@@ -15,18 +15,18 @@ public class Database {
                 items.add(new Item(0, 1016, 1, "EA", 1));
                 break;
             case "planning_1":
-                items.add(new Item(2, 1020, 10, "CS", 24));
-                items.add(new Item(2, 1021, 10, "PK", 6));
+                items.add(new Item(2, 1020, 240, "CS", 24));
+                items.add(new Item(2, 1021, 60, "PK", 6));
                 items.add(new Item(2, 1021, 10, "EA", 1));
                 break;
             case "planning_2":
-                items.add(new Item(2, 1030, 10, "CS", 24));
-                items.add(new Item(2, 1031, 10, "PK", 6));
+                items.add(new Item(2, 1030, 240, "CS", 24));
+                items.add(new Item(2, 1031, 60, "PK", 6));
                 items.add(new Item(2, 1032, 0, "EA", 1));
                 break;
             case "local":
-                items.add(new Item(3, 1040, 1, "CS", 20));
-                items.add(new Item(3, 1041, 1, "PK", 5));
+                items.add(new Item(3, 1040, 20, "CS", 20));
+                items.add(new Item(3, 1041, 5, "PK", 5));
                 items.add(new Item(3, 1042, 5, "EA", 1));
                 break;
         }

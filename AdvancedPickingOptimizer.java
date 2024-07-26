@@ -7,7 +7,7 @@ public class AdvancedPickingOptimizer {
     public static void main(String[] args) {
         //printCase(Arrays.asList(1, 3, 10, 11, 23, 50,100,100000),new ArrayList<>(Database.getItems("planning_1")));
         System.out.println("***************************************************************************");
-        //printCase(Arrays.asList(1, 3, 10, 11, 23, 50,100,100000), Database.getItems("planning_2"));
+        printCase(Arrays.asList(1, 3, 10, 11, 23, 50,100,100000), Database.getItems("planning_2"));
         System.out.println("***************************************************************************");
         printCase(Arrays.asList(11),Database.getItems("local"));
         System.out.println("***************************************************************************");
@@ -27,14 +27,13 @@ public class AdvancedPickingOptimizer {
                     }
                 });
             }
-            pickingResult.getResult().clear();
             System.out.println("---------------------------------------------");
         });
     }
 
     private static List<Item> copyItemList(List<Item> itemList) {
         return itemList.stream()
-                .map(item -> new Item(item.itemId, item.stockId, item.usableStockEaQuantity, item.unitOfMeasurement.name(), item.unitOfMeasurementValue))
+                .map(item -> new Item(item.itemId, item.stockId, item.usableStockUomQuantity, item.unitOfMeasurement.name(), item.unitOfMeasurementValue))
                 .collect(Collectors.toList());
     }
 
@@ -49,27 +48,23 @@ public class AdvancedPickingOptimizer {
         for (UnitOfMeasure uom : unitOfMeasurement) {
             filteredItems = items.stream()
                     .filter(item -> item.unitOfMeasurement.equals(uom))
-                    .sorted(Comparator.comparingInt(item -> -item.usableStockEaQuantity))
+                    .sorted(Comparator.comparingInt(item -> -item.usableStockUomQuantity))
                     .toList();
 
-            System.out.println("FUCK::"+orderEaQuantity);
-            System.out.println(filteredItems);
             for (Item item : filteredItems) {
                 if (orderEaQuantity <= 0) break;
-                int simulatedPickedUomStockQuantity = Math.min(orderEaQuantity / item.unitOfMeasurementValue, item.usableStockEaQuantity);
+                int simulatedPickedUomStockQuantity = Math.min(orderEaQuantity / item.unitOfMeasurementValue, item.usableStockUomQuantity);
                 System.out.println(simulatedPickedUomStockQuantity);
 
                 /* console 개수 확인용 */
-                resultOfSelectedUomQuantity.put(uom, resultOfSelectedUomQuantity.get(uom) + simulatedPickedUomStockQuantity);
+                resultOfSelectedUomQuantity.replace(uom, resultOfSelectedUomQuantity.get(uom) + simulatedPickedUomStockQuantity);
 
                 orderEaQuantity -= simulatedPickedUomStockQuantity * item.unitOfMeasurementValue;
-                item.usableStockEaQuantity -= orderEaQuantity;
+                item.usableStockUomQuantity -= orderEaQuantity;
                 item.pickedStockUomQuantity += simulatedPickedUomStockQuantity;
                 item.pickedStockEaQuantity = item.pickedStockUomQuantity * item.unitOfMeasurementValue;
 
                 if(simulatedPickedUomStockQuantity > 0) {
-
-
                     List<Item> itemsByUom = pickedItems.computeIfAbsent(uom.name(), k -> new ArrayList<>());
                     Optional<Item> existedItem = itemsByUom
                             .stream()
@@ -77,7 +72,7 @@ public class AdvancedPickingOptimizer {
                             .findFirst();
 
                     if (existedItem.isPresent()) {
-                        existedItem.get().usableStockEaQuantity += simulatedPickedUomStockQuantity;
+                        existedItem.get().usableStockUomQuantity += simulatedPickedUomStockQuantity;
                         existedItem.get().pickedStockUomQuantity += simulatedPickedUomStockQuantity;
                         existedItem.get().pickedStockEaQuantity = item.pickedStockUomQuantity * item.unitOfMeasurementValue;
                     } else {
@@ -94,15 +89,15 @@ public class AdvancedPickingOptimizer {
             for (UnitOfMeasure uom : unitOfMeasurementReverse) {
                 filteredItems = items.stream()
                         .filter(item -> item.unitOfMeasurement.equals(uom))
-                        .sorted(Comparator.comparingInt(item -> -item.usableStockEaQuantity))
+                        .sorted(Comparator.comparingInt(item -> -item.usableStockUomQuantity))
                         .toList();
 
                 for (Item item : filteredItems) {
-                    if (item.usableStockEaQuantity > 0) {
-                        resultOfSelectedUomQuantity.put(uom, resultOfSelectedUomQuantity.get(uom) + 1);
+                    if (item.usableStockUomQuantity > 0) {
+                        resultOfSelectedUomQuantity.replace(uom, resultOfSelectedUomQuantity.get(uom) + 1);
                         orderEaQuantity = item.unitOfMeasurementValue - orderEaQuantity;
                         item.remainStockEaQuantity = orderEaQuantity;
-                        item.usableStockEaQuantity -= 1;
+                        item.usableStockUomQuantity -= 1;
                         item.pickedStockUomQuantity += 1;
                         item.pickedStockEaQuantity = item.pickedStockUomQuantity * item.unitOfMeasurementValue;
 
@@ -131,11 +126,11 @@ public class AdvancedPickingOptimizer {
     }
 }
 
-class PickingResult {
+class PickingResult__2 {
     private final Map<UnitOfMeasure, Integer> resultOfSelectedUomQuantity;
     private final Map<String, List<Item>> pickedItems;
 
-    public PickingResult(Map<UnitOfMeasure, Integer> resultOfSelectedUomQuantity, Map<String, List<Item>> pickedItems) {
+    public PickingResult__2(Map<UnitOfMeasure, Integer> resultOfSelectedUomQuantity, Map<String, List<Item>> pickedItems) {
         this.resultOfSelectedUomQuantity = resultOfSelectedUomQuantity;
         this.pickedItems = pickedItems;
     }
