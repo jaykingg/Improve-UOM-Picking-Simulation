@@ -8,9 +8,9 @@ public class AdvancedPickingOptimizer__2 {
         System.out.println("***************************************************************************");
         //printCase(Arrays.asList(1, 3, 10, 11, 23, 50,100,100000),new ArrayList<>(Database.getItems("planning_1")));
         System.out.println("***************************************************************************");
-        //printCase(Arrays.asList(1, 3, 10, 11, 23, 50,100,100000), Database.getItems("planning_2"));
+        printCase(Arrays.asList(22), Database.getItems("case2"));
         System.out.println("***************************************************************************");
-        printCase(Arrays.asList(1, 3, 10, 11, 23, 50), Database.getItems("local"));
+        //printCase(Arrays.asList(1, 3, 10, 11, 23, 100), Database.getItems("local"));
         System.out.println("***************************************************************************");
         //printCase(Arrays.asList(1, 3, 10, 11, 23, 50,100000),Database.getItems("dev"));
     }
@@ -51,6 +51,7 @@ public class AdvancedPickingOptimizer__2 {
 
             for (Item item : filteredItems) {
                 if (orderEaQuantity <= 0) break;
+                if (item.usableStockEaQuantity < orderEaQuantity) continue;
                 int simulatedOrderUomQuantity = Math.min(orderEaQuantity / item.unitOfMeasurementValue, item.usableStockUomQuantity);
                 resultForPrint.put(uom, resultForPrint.get(uom) + simulatedOrderUomQuantity);
                 orderEaQuantity -= simulatedOrderUomQuantity * item.unitOfMeasurementValue;
@@ -92,7 +93,7 @@ public class AdvancedPickingOptimizer__2 {
 
                 for (Item item : filteredItems) {
                     if (orderEaQuantity <= 0) break;
-                    if (item.usableStockUomQuantity > 0) {
+                    if (item.usableStockUomQuantity > 0 && item.usableStockEaQuantity >= orderEaQuantity) {
                         resultForPrint.put(uom, resultForPrint.get(uom) + 1);
                         orderEaQuantity = item.unitOfMeasurementValue - orderEaQuantity;
 
